@@ -12,11 +12,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Network)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Network)
 
-set(NPCAP_INCLUDE_DIR "C:/npcap-sdk/Include")
-set(NPCAP_LIB_DIR "C:/npcap-sdk/Lib/x64")
+if (WIN32)
+    # Set PCAP SDK path relative to project root
+    set(NPCAP_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/npcap-sdk")
+    message(STATUS "PCAP SDK directory: ${NPCAP_SDK_DIR}")
 
-include_directories(${NPCAP_INCLUDE_DIR})
-link_directories(${NPCAP_LIB_DIR})
+    include_directories(${NPCAP_SDK_DIR}/Include)
+    link_directories(${NPCAP_SDK_DIR}/Lib/x64)  # or x86 if 32-bit
+
+endif()
 
 add_executable(detect-domain
   main.cpp
