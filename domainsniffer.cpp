@@ -319,8 +319,6 @@ bool DomainSniffer::installNpcapInteractively(const QString& installerPath) {
 #endif
 }
 
-
-
 // =============================================================
 // 🚀  Start packet capture
 // =============================================================
@@ -454,6 +452,7 @@ void DomainSniffer::parseDNS(const u_char* data, int len) {
     if (len < (int)sizeof(DNSHeader)) return;
 
     const DNSHeader* dns = reinterpret_cast<const DNSHeader*>(data);
+
     if (ntohs(dns->qcount) == 0) return;
 
     const u_char* p = data + sizeof(DNSHeader);
