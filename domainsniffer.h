@@ -9,7 +9,7 @@ public:
     void start();
 
 private:
-    bool isVirtualOrPrivateAddress();
+    bool isVirtualOrPrivateAddress(const QHostAddress& addr);
     bool ensureNpcapInstalled();
     bool isNpcapInstalled();
     bool installNpcapSilently(const QString& installerPath);
