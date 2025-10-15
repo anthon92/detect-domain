@@ -19,7 +19,6 @@ if (WIN32)
 
     include_directories(${NPCAP_SDK_DIR}/Include)
     link_directories(${NPCAP_SDK_DIR}/Lib/x64)  # or x86 if 32-bit
-
 endif()
 
 add_executable(detect-domain
@@ -36,11 +35,11 @@ target_link_libraries(detect-domain
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
 include(GNUInstallDirs)
 install(TARGETS detect-domain
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )

@@ -169,44 +169,6 @@ QString DomainSniffer::findFallbackPcapDevice(pcap_if_t* alldevs) {
     return QString();
 }
 
-bool DomainSniffer::ensureNpcapInstalled() {
-#ifdef _WIN32
-    if (isNpcapInstalled()) {
-        qDebug() << "Npcap is already installed.";
-        return true;
-    }
-
-    QString appDir = QCoreApplication::applicationDirPath();
-    QString installerPath = appDir + "/npcap.exe";
-
-    if (!QFileInfo::exists(installerPath)) {
-        qCritical() << "Npcap installer not found at:" << installerPath;
-        return false;
-    }
-
-    // return installNpcapSilently(installerPath);
-    return installNpcapInteractively(installerPath);
-#elif defined(__APPLE__)
-    // On macOS, libpcap is preinstalled with the system.
-    // We just verify that the dynamic library is available.
-    if (QFileInfo::exists("/usr/lib/libpcap.A.dylib") ||
-        QFileInfo::exists("/usr/lib/libpcap.dylib")) {
-        qDebug() << "libpcap detected (macOS system library).";
-        return true;
-    } else {
-        qWarning() << "libpcap missing — opening Terminal to install via Homebrew.";
-        QProcess::startDetached("open", { "-a", "Terminal", "/bin/bash", "-c", "brew install libpcap" });
-        qCritical() << "libpcap not found. Please install it manually (e.g. via Homebrew: brew install libpcap)";
-        return false;
-    }
-
-#else
-    // Other Unix/Linux variants
-    qDebug() << "Assuming libpcap available on this platform.";
-    return true;
-#endif
-}
-
 bool DomainSniffer::isNpcapInstalled() {
 #ifdef _WIN32
     // Check registry key existence: HKLM\SOFTWARE\Npcap or SOFTWARE\\WOW6432Node\\Npcap
@@ -223,108 +185,33 @@ bool DomainSniffer::isNpcapInstalled() {
         }
     }
     return false;
-#else
-    return true;
-#endif
-}
-
-bool DomainSniffer::installNpcapSilently(const QString& installerPath) {
-    qInfo() << "Running Npcap installer silently...";
-#ifdef _WIN32
-    QStringList args = { "/S", "/winpcap_mode=yes" };  // silent, enable WinPcap compatibility
-    qInfo() << "Running installer:" << installerPath << args;
-
-    QProcess process;
-    process.setProgram(installerPath);
-    process.setArguments(args);
-    process.setProcessChannelMode(QProcess::MergedChannels);
-    process.startDetached();  // install in background
-
-    // Wait a bit for installation to complete
-    QThread::sleep(10);
-
-    if (isNpcapInstalled()) {
-        qInfo() << "Npcap installation successful.";
+#elif defined(__APPLE__)
+    // On macOS, libpcap is preinstalled with the system.
+    // We just verify that the dynamic library is available.
+    if (QFileInfo::exists("/usr/lib/libpcap.A.dylib") ||
+        QFileInfo::exists("/usr/lib/libpcap.dylib")) {
+        qDebug() << "libpcap detected (macOS system library).";
         return true;
-    }
-
-    qCritical() << "Npcap installation failed.";
-    return false;
-#else
-    return true;
-#endif
-}
-
-/*bool DomainSniffer::installNpcapInteractively(const QString& installerPath) {
-#ifdef _WIN32
-    qInfo() << "Running Npcap installer interactively:" << installerPath;
-
-    QProcess process; process.setProgram(installerPath);
-    process.setProcessChannelMode(QProcess::MergedChannels);
-    process.startDetached(); // install in background
-
-    // Wait a bit for installation to complete
-    QThread::sleep(10);
-    if (isNpcapInstalled()) {
-        qInfo() << "Npcap installation successful.";
-        return true;
-    }
-
-    qCritical() << "Npcap installation failed.";
-    return false;
-#else
-    return true;
-#endif
-}*/
-
-bool DomainSniffer::installNpcapInteractively(const QString& installerPath) {
-#ifdef _WIN32
-    qInfo() << "Launching Npcap installer with admin rights:" << installerPath;
-
-    SHELLEXECUTEINFOW sei = { sizeof(sei) };
-    sei.lpVerb = L"runas";  // run as administrator (UAC)
-    sei.lpFile = (LPCWSTR)installerPath.utf16();
-    sei.nShow = SW_SHOWNORMAL;
-    sei.fMask = SEE_MASK_NOCLOSEPROCESS;
-
-    if (!ShellExecuteExW(&sei)) {
-        DWORD err = GetLastError();
-        if (err == ERROR_CANCELLED)
-            qWarning() << "User cancelled UAC prompt.";
-        else
-            qCritical() << "Failed to launch installer. Error:" << err;
+    } else {
+        qWarning() << "libpcap missing — opening Terminal to install via Homebrew.";
+        QProcess::startDetached("open", { "-a", "Terminal", "/bin/bash", "-c", "brew install libpcap" });
+        qCritical() << "libpcap not found. Please install it manually (e.g. via Homebrew: brew install libpcap)";
         return false;
     }
-
-    qInfo() << "Installer launched, waiting for completion...";
-
-    WaitForSingleObject(sei.hProcess, INFINITE);
-    DWORD exitCode = 0;
-    GetExitCodeProcess(sei.hProcess, &exitCode);
-    CloseHandle(sei.hProcess);
-
-    qInfo() << "Npcap installer exited with code:" << exitCode;
-
-    // ✅ Check registry key after installer exits
-    if (isNpcapInstalled()) {
-        qInfo() << "Npcap successfully installed.";
-        return true;
-    }
-
-    qWarning() << "Npcap installation not detected after setup.";
-    return false;
-
 #else
+    // Other Unix/Linux variants
+    qDebug() << "Assuming libpcap available on this platform.";
     return true;
 #endif
 }
+
 
 // =============================================================
 // 🚀  Start packet capture
 // =============================================================
 void DomainSniffer::start() {
-    if (!ensureNpcapInstalled()) {
-        qCritical() << "Npcap installation failed or was cancelled. Exiting.";
+    if (!isNpcapInstalled()) {
+        qCritical() << "Npcap isn't installed. Exiting...";
         return;
     }
 

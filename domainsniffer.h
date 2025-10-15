@@ -10,11 +10,8 @@ public:
 
 private:
     bool isVirtualOrPrivateAddress(const QHostAddress& addr);
-    bool ensureNpcapInstalled();
     bool isNpcapInstalled();
-    bool installNpcapSilently(const QString& installerPath);
-    bool installNpcapInteractively(const QString& installerPath);
-
+    
     void parseDNS(const u_char* data, int len);
     void parseTLS(const u_char* data, int len);
     static void packetHandler(u_char* user, const pcap_pkthdr* header, const u_char* packet);
