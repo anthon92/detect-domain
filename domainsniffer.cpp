@@ -78,8 +78,22 @@ bool DomainSniffer::isVirtualOrPrivateAddress(const QHostAddress& addr) {
     if ((ip & 0xFF000000) == 0x0A000000) return true;        // 10.0.0.0/8
     if ((ip & 0xFFF00000) == 0xAC100000) return true;        // 172.16.0.0/12
     if ((ip & 0xFFFF0000) == 0xC0A80000) return true;        // 192.168.0.0/16
-    if ((ip & 0xFFFF0000) == 0xC6120000) return true;        // 198.18.0.0/15 (test)
+    if ((ip & 0xFFFF0000) == 0xC6120000) return true;        // 198.18.0.0/15 (test/lab)
     if ((ip & 0x000000FF) == 127) return true;               // 127.0.0.0/8 loopback
+
+    // Common VMware NAT and Host-Only ranges
+    if ((ip & 0xFFFF0000) == 0xC0A8E900) return true;        // 192.168.233.0/24 VMware
+    if ((ip & 0xFFFF0000) == 0xC0A8EA00) return true;        // 192.168.234.0/24 VMware
+    if ((ip & 0xFFFF0000) == 0xC0A8EB00) return true;        // 192.168.235.0/24 VMware
+
+    // Common Hyper-V NAT / Default Switch
+    if ((ip & 0xFFFFFF00) == 0xC0A8AA00) return true;        // 192.168.170.0/24 Hyper-V Default Switch
+
+    // Common Wintun / VPN / virtual test ranges
+    if ((ip & 0xFFFF0000) == 0xA9FE0000) return true;        // 169.254.0.0/16 (link-local)
+    if ((ip & 0xFFFF0000) == 0x64400000) return true;        // 100.64.0.0/10 (Carrier-grade NAT, often VPN)
+    if ((ip & 0xFFFF0000) == 0xC0A80100) return true;        // 192.168.1.0/24 (common local/VPN use)
+
     return false;
 }
 
@@ -130,12 +144,25 @@ QString DomainSniffer::findPcapDeviceForLocalIp(pcap_if_t* alldevs, const QHostA
 
     for (pcap_if_t* d = alldevs; d; d = d->next) {
         QString devName = QString::fromUtf8(d->name);
-        // skip tunnels, WAN Miniports, etc.
+        QString devDesc = d->description ? d->description : "(no description)";
+        // Skip unwanted virtual or non-physical adapters
         if (devName.contains("WAN", Qt::CaseInsensitive) ||
             devName.contains("Loopback", Qt::CaseInsensitive) ||
             devName.contains("tunnel", Qt::CaseInsensitive) ||
-            devName.contains("Wintun", Qt::CaseInsensitive))
+            devName.contains("Wintun", Qt::CaseInsensitive) ||
+            devName.contains("VMware", Qt::CaseInsensitive) ||
+            devName.contains("Hyper-V", Qt::CaseInsensitive) ||
+            devName.contains("Virtual", Qt::CaseInsensitive))
             continue;
+        if (devDesc.contains("WAN", Qt::CaseInsensitive) ||
+            devDesc.contains("Loopback", Qt::CaseInsensitive) ||
+            devDesc.contains("tunnel", Qt::CaseInsensitive) ||
+            devDesc.contains("Wintun", Qt::CaseInsensitive) ||
+            devDesc.contains("VMware", Qt::CaseInsensitive) ||
+            devDesc.contains("Hyper-V", Qt::CaseInsensitive) ||
+            devDesc.contains("Virtual", Qt::CaseInsensitive))
+            continue;
+
 
         for (pcap_addr_t* a = d->addresses; a; a = a->next) {
             if (a->addr && a->addr->sa_family == AF_INET) {
@@ -155,10 +182,23 @@ QString DomainSniffer::findFallbackPcapDevice(pcap_if_t* alldevs) {
     if (!alldevs) return QString();
     for (pcap_if_t* d = alldevs; d; d = d->next) {
         QString devName = QString::fromUtf8(d->name);
+        QString devDesc = d->description ? d->description : "(no description)";
+        // Skip unwanted virtual or non-physical adapters
         if (devName.contains("WAN", Qt::CaseInsensitive) ||
             devName.contains("Loopback", Qt::CaseInsensitive) ||
+            devName.contains("tunnel", Qt::CaseInsensitive) ||
             devName.contains("Wintun", Qt::CaseInsensitive) ||
-            devName.contains("Tunnel", Qt::CaseInsensitive))
+            devName.contains("VMware", Qt::CaseInsensitive) ||
+            devName.contains("Hyper-V", Qt::CaseInsensitive) ||
+            devName.contains("Virtual", Qt::CaseInsensitive))
+            continue;
+        if (devDesc.contains("WAN", Qt::CaseInsensitive) ||
+            devDesc.contains("Loopback", Qt::CaseInsensitive) ||
+            devDesc.contains("tunnel", Qt::CaseInsensitive) ||
+            devDesc.contains("Wintun", Qt::CaseInsensitive) ||
+            devDesc.contains("VMware", Qt::CaseInsensitive) ||
+            devDesc.contains("Hyper-V", Qt::CaseInsensitive) ||
+            devDesc.contains("Virtual", Qt::CaseInsensitive))
             continue;
 
         for (pcap_addr_t* a = d->addresses; a; a = a->next) {
