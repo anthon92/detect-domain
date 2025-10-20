@@ -5,7 +5,7 @@
 #include <cstring>
 #include <QRegularExpression>
 
-#ifdef _WIN32
+#ifdef Q_OS_WIN
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QProcess>
@@ -114,7 +114,7 @@ QHostAddress DomainSniffer::localAddressForRoute(const QString& remoteIp, quint1
     inet_pton(AF_INET, remoteIp.toLocal8Bit().constData(), &remote.sin_addr);
 
     if (connect(sock, reinterpret_cast<struct sockaddr*>(&remote), sizeof(remote)) < 0) {
-#ifdef _WIN32
+#ifdef Q_OS_WIN
         closesocket(sock);
 #else
         close(sock);
@@ -210,7 +210,7 @@ QString DomainSniffer::findFallbackPcapDevice(pcap_if_t* alldevs) {
 }
 
 bool DomainSniffer::isNpcapInstalled() {
-#ifdef _WIN32
+#ifdef Q_OS_WIN
     // Check registry key existence: HKLM\SOFTWARE\Npcap or SOFTWARE\\WOW6432Node\\Npcap
     HKEY hKey;
     LONG result = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\WOW6432Node\\Npcap", 0, KEY_READ, &hKey);
@@ -225,7 +225,7 @@ bool DomainSniffer::isNpcapInstalled() {
         }
     }
     return false;
-#elif defined(__APPLE__)
+#elif defined(Q_OS_MACOS)
     // On macOS, libpcap is preinstalled with the system.
     // We just verify that the dynamic library is available.
     if (QFileInfo::exists("/usr/lib/libpcap.A.dylib") ||
@@ -261,14 +261,13 @@ void DomainSniffer::start() {
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_if_t* alldevs = nullptr;
 
-#ifdef _WIN32
+#ifdef Q_OS_WIN
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         qCritical() << "Failed to initialize Winsock.";
         return;
     }
 #endif
-
     if (pcap_findalldevs(&alldevs, errbuf) == -1) {
         qCritical() << "Error finding devices:" << errbuf;
         return;
